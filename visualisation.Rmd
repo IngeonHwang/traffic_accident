@@ -1,0 +1,841 @@
+---
+title: "traffic_visualisation"
+author: "extract_text_from_pdf"
+date: "01/09/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r prepare packages}
+library(dplyr)
+library(tidyverse) 
+library(caret)  # Load Caret package for computing Confusion matrix
+library(e1071) # Load e1071 package for svm (build our SVM model)
+library(pROC) 
+library(ggplot2) 
+library(DataExplorer)
+library(ROSE)
+library(xml2)
+library(rvest)
+library(stringr)
+library(knitr)
+library(stringi)
+library(stringr)
+library(tidyr)
+library(tidytext)
+library(radarchart)
+library(SnowballC)
+library(readtext)
+library(tm)
+library(RWeka)
+library(reshape2)
+library(quanteda)
+library(wordcloud)
+library(lubridate)
+require(devtools)
+library(magrittr)
+library(koRpus)
+# rm(list=ls())
+
+```
+
+
+```{r}
+traffic_adj <- read_csv('/Users/ingeonhwang/Downloads/final/traffic_adj.csv')
+dataset_week <- read_csv('/Users/ingeonhwang/Downloads/final/dataset_week.csv')
+
+
+head(traffic_adj)
+head(dataset_week)
+```
+
+
+
+
+
+
+```{r}
+
+dataset_week 
+
+
+```
+
+```{r}
+read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/final/accident_2020.csv')
+```
+
+
+
+
+
+
+```{r}
+library(maptools)
+seoul <- readShapePoly("/Users/ingeonhwang/Downloads/SIG_202005/SIG.shp")
+```
+
+```{r}
+library(tidyverse)
+library(sf)
+
+sigungu_shp <- st_read("/Users/ingeonhwang/Downloads/SIG_202005/SIG.shp")
+
+```
+
+```{r}
+## 인코딩 변경
+sigungu_shp$SIG_KOR_NM <- iconv(sigungu_shp$SIG_KOR_NM, from = "CP949", to = "UTF-8", sub = NA, mark = TRUE, toRaw = FALSE)
+
+## 시각화
+sigungu_shp %>% 
+  filter(str_detect(SIG_CD, "^42")) %>% 
+  select(SIG_KOR_NM) %>% 
+  plot()
+```
+
+
+
+
+
+
+
+
+```{r}
+#데이터 시각화
+
+#시각화 정의
+#인간의 시지각 능력을 토대로 데이터에 대한 이해와 설득에 도움을 주기 위해 그림이나 도
+#형 등의 그래픽 요소들을 이용하여 데이터를 묘사하고 표현하는 것이다.
+
+#시각화 기능
+#설명 - 데이터의 시각화를 통해 전달하려는 메시지와 주요한 분석 결과를 설명
+
+#탐색 - 데이터에 숨겨져 있는 관계와 패턴을 찾기 위한 시각적 분석 기능
+
+#표현 - 데이터를 활용한 예술적인 표현을 통해 감정적인 시선이나 이야기 전달, 공감으 불러일으키기 위한 기능 
+
+#http://data.seoul.go.kr  
+#http://stat.seoul.go.kr/jsp3/index.jsp
+
+#car_accid_2016.txt
+#car_accid_2005_2016.txt
+accid_17_19<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/seoul_car_acci_v1.tx.txt',sep=',')
+head(accid_2015)   #자치구별 2015 교통사고 현황
+
+
+accid_2016<-read.csv('c:/JAVA/car_accid_2016.txt',sep='\t')
+head(accid_2016)
+#자치구별 2016 교통사고 현황
+
+
+accid_2005_2016 <-read.csv('c:/JAVA/car_accid_2005_2016.txt',sep='\t',fileEncoding = 'euc-kr')
+head(accid_2005_2016)
+#자치구별 2005~2016 교통사고 현황
+
+
+#R 시각화 도구
+#graphics : R 기본 시각화도구, 별도설치x, 
+#          쉽고 사용하기 편함 
+#ggplot2 : R 고급 시각화도구, 별도 설치0,
+#          배우기 다소 어려움
+#lattice : R 시각화 도구, 
+#          다중 그래프 작성시 편리, 직관성 떨어짐
+
+
+#install.packages('lattice')
+#library(lattice)
+
+# install.packages('ggplot2')
+library(ggplot2)
+
+#그래프 작성 보조 도구 - dplyr
+# install.packages('dplyr')
+library(dplyr)
+
+#산점도
+head(iris)
+gg1<-ggplot(iris,aes(Sepal.Length,Sepal.Width))
+#그래프 작성 초기화 (데이터 집합, x축, y축)
+gg1<-geom_point(aes(Sepal.Length, Sepal.Width))
+
+gg1<-gg1+geom_point()
+#점 그래프 : 산점도, 산포도
+print(gg1)
+
+#Species 별로 색상을 지정해서 산포도 그림
+#colour에 잦동으로 색상 부여시 Factor 타입 변수 필요!
+gg2<-ggplot(iris,aes(Sepal.Length,Sepal.Width))
+gg2<-gg2+geom_point()   #산점도는 point로! 
+gg2<-gg2+geom_point(aes(colour=Species,
+                        size=Petal.Width))
+
+print(gg2)
+
+
+#서울 중구 2015 교통사고 현황(월/발생건수)을 
+#산점도geom_point로 작성
+str(accid_2015)
+junggu2015 <- subset(accid_2015,자치구명=='중구')
+junggu2015
+
+p1<-ggplot(junggu2015,aes(x=월,y=발생건수))
+p1<-p1+geom_point()
+p1<-p1+geom_point(aes(colour=월, size=월))
+p1<-p1+xlim(1,13)+ylim(0,150)   #x,y 상하한값
+p1<-p1+ggtitle('2015년 중구 월별 교통사고 발생 현황')
+print(p1)
+
+#또 다른 유형 산점도
+x<-1:50
+#y<-sapply(x,function(x) {x/(x+1)})
+y<-sapply(x,function(x) x/(x+1))  #괄호 생략
+df <-data.frame(x,y)
+head(df)
+
+
+gg3<-ggplot(df,aes(x,y))
+gg3<-gg3+geom_point()
+print(gg3)
+
+#다이아몬드 데이터집합
+#캐럿당 가격을 산포도로 그림, 색상은 color 변수 사용
+head(diamonds)
+
+gg4<-ggplot(diamonds,aes(carat,price))
+gg4<-gg4+geom_point(aes(colour=color,size=price))
+print(gg4)
+
+#선그래프 : geom_line
+head(economics)
+
+#시기date별 실업율unemploy 현황  
+gg5<-ggplot(economics)
+gg5<-gg5+geom_line(aes(x=date,y=unemploy))
+print(gg5)
+
+#선 그래프에 색상/크기 지정
+gg6<-ggplot(economics,aes(x=date,y=unemploy))
+gg6<-gg6+geom_line(colour='red', size=1, linetype=2)
+print(gg6)
+
+#여러 개의 선 그래프 작성
+gg7<-ggplot(economics)
+gg7<-gg7+geom_line(aes(x=date, y=unemploy))
+gg7<-gg7+geom_line(aes(x=date, y=pce),colour='red')
+print(gg7)
+
+#오렌지 나무 연령(개월)별 둘레 현황
+head(Orange)
+
+#선그래프 + 점 그래프 
+gg8<-ggplot(Orange, aes(age,circumference))
+gg8<-gg8+geom_line(aes(colour=Tree))
+gg8<-gg8+geom_point()
+print(gg8)
+
+#서울 중구 2015 교통사고 현황(월/발생건수)을 
+#선그래프 geom_line로 작성
+
+p2b<-ggplot(junggu2015,aes(x=월,y=발생건수))
+p2b<-p2b+geom_line()
+p2b<-p2b+geom_point()
+p2b<-p2b+xlim(1,13)+ylim(0,150)   #x,y 상하한값
+p2b<-p2b+ggtitle('2015년 중구 월별 교통사고 발생 현황')
+p2b<-p2b+scale_x_continuous(breaks=1:12)
+#p2b<-p2b+theme(panel.background = element_blank())
+p2b<-p2b+theme(panel.background = 
+              element_rect(colour = 'grey'),
+              plot.title=element_text(hjust=0.5))
+print(p2b)
+
+
+#막대그래프 : geom_bar
+head(mtcars)
+str(mtcars)     #factor 요소 확인
+
+#차량별 실린더수 현황 히스토그램
+gg9<-ggplot(mtcars,aes(cyl))
+gg9<-geom_bar()
+print(gg9)
+
+fcyl<-factor(mtcars$cyl)
+#cyl은 num타입 - factor 형으로 변환 
+gg9b<-ggplot(mtcars,aes(fcyl))
+gg9b<-gg9b+geom_bar(
+        aes(fill=fcyl),width=0.5)
+print(gg9b)
+
+#누적 막대 그래프 
+fgear<-factor(mtcars$gear)
+gg9c<-ggplot(mtcars,aes(fcyl))
+gg9c<-gg9c+geom_bar(aes(fill=fcyl),width=0.5)
+gg9c<-gg9c+geom_bar(aes(fill=fgear),width=0.5)
+print(gg9c)
+
+
+#수평 누적 막대 그래프
+gg9d<-ggplot(mtcars, aes(fcyl))
+gg9d<-gg9d+geom_bar(aes(fill=fcyl),width=0.5)
+gg9d<-gg9d+geom_bar(aes(fill=fgear),width=0.5)
+gg9d<-gg9d+coord_flip()
+print(gg9d)
+
+#일반적인 막대그래프
+#실린더 수에 따른 연비 그래프
+#stat='identity'는 y축값을 mpg값 그대로 사용하라는 의미
+gg10<-ggplot(mtcars,aes(fcyl,mpg))
+gg10<-gg10+geom_bar(
+        aes(fill=fcyl), stat='identity')
+print(gg10)
+
+#서울 중구 2015 교통사고 현황(월/발생건수)을
+#막대그래프 geom_bar로 작성
+
+p4<-ggplot(junggu2015,aes(x=월,y=발생건수))
+#p4<-p4+geom_bar(aes(fill=월),stat='identity')
+#p4<-p4+geom_bar(fill='red',stat='identity')
+p4<-p4+geom_bar(fill=월,stat='identity')
+
+print(p4)
+
+#2015년 12월 서울 각 자치구역 별
+#교통사고 현황(자치구별/발생건수)을
+#막대그래프 geom_bar로 작성
+head(accid_2015_12)
+
+accid_2015_12 <-subset(accid_2015,연도==2015&월==12)
+accid_2015_12
+p5<-ggplot(accid_2015_12,aes(x=자치구명,y=발생건수))
+#p5<-p5+geom_bar(stat='identity')
+#p5<-p5+geom_bar(aes(fill=자치구명) ,stat='identity')
+#p5<-p5+geom_bar(fill=rainbow(25) ,stat='identity')
+p5<-p5+geom_bar(aes(fill=자치구명),stat='identity')
+p5<-p5+theme(axis.text.x = element_text(angle=90, hjust=1))
+#각도는 90도로 수평수직을 1로 해주고 
+#x축의 텍스트의 위치를 변경해준다는 뜻
+
+print(p5)
+###stat='identity'가 있으면 y축이 기준이 되어서 데이터를 표시해준다
+###aes는 x축y축에 값을 집어넣거나 스타일 지정할때 사용! 
+###aes는 범례를 알록달록 나타낼때도 사용한다 
+
+#2015년 12월 서울 각 자치구 별
+#교통사고 현황(자치구명/부상자수)을 출력
+
+p6<-ggplot(accid_2015_12,aes(x=자치구명,y=부상자수))
+p6<-p6+geom_bar(fill=rainbow(25) ,stat='identity')
+print(p6)
+#2015년 12월 서울 각 자치구 별
+#교통사고 현황(자치구명/사망자수)을 출력 
+
+p7<-ggplot(accid_2015_12,aes(x=자치구명,y=사망자수))
+p7<-p7+geom_bar(fill=rainbow(25) ,stat='identity')
+print(p7)
+
+#원 그래프: geom_bar + coord_polar()
+print(gg9)
+
+gg9<-gg9+coord_flip()   #수평막대
+print(gg9)
+
+gg9b<-gg9b+coord_polar()   #원그래프
+print(gg9b)
+
+#일반적인 파이 그래프 
+gg10 <-ggplot(mtcars,aes(factor(1),fill=fcyl))
+gg10<-gg10+geom_bar(width=1)
+gg10<-gg10+coord_polar(theta='y')
+print(gg10)
+
+#
+df<-data.frame(
+  group = c('Male','Female','Child'),
+  age = c(25,27,5))
+head(df)
+
+bc<-ggplot(df,aes('',age,fill=group))
+bc<-bc+geom_bar(stat='identity')
+bc<-bc+coord_polar(theta='y')    #임의의 각도 사용 
+print(bc)
+#theta는 세타 즉 각도임! 
+
+#heat map:heatmap()
+#데이터가 행렬 객체를 사용함
+accid_2015_12 #문자와 숫자가 같이 있음
+row.names(accid_2015_12)<-accid_2015_12$자치구명
+#accid_2015_12의 각 행의 이름을 지정
+mtx_acc_2015_12<-accid_2015_12[,c(4:6)]
+#ccid_2015_12에서 발생건수, 사망자수,부상자수 추출
+mtx_acc_2015_12<-data.matrix(mtx_acc_2015_12)
+#발생건수,사망자수,부상자수 데이터를 행렬로 변환
+mtx_acc_2015_12
+
+heatmap(mtx_acc_2015_12,col=cm.colors(128),
+        Rowv=NA, Colv=NA, scale='column',
+        cexCol=1,margin=c(5,5))
+
+#mtcars
+head(mtcars)
+mmtcars<-as.matrix(mtcars)
+head(mtcars)
+
+heatmap(mmtcars)      #기본 열그래프 작성
+heatmap(mmtcars, scale='column')  #정규화 작업후 다시그림
+                                #유사성을 나타내기 위해 군집화 실행
+heatmap(mmtcars, scale='column',
+        Colv=NA,Rowv=NA)   #군집화 제거 
+
+heatmap(mmtcars, scale='column',
+        Colv=NA,Rowv=NA, col=rainbow(256))  #색상지정1
+
+heatmap(mmtcars, scale='column',
+        Colv=NA,Rowv=NA, col=terrain.colors(256))  #색상지정2
+
+#버블차트
+#2015년 12월 서울 각 자치구 별 
+#교통사고 현황(발생건수/사망자수)을 출력
+gg11<-ggplot(accid_2015_12,aes(발생건수,사망자수))
+gg11<-gg11+geom_point(aes(size=사망자수),
+                     shape=16,color='blue',alpha=0.45)
+#gg11<-gg11+scale_fill_brewer(palette='Set1')
+gg11<-gg11+scale_fill_brewer(palette='Paired')
+
+print(gg11)
+
+#scale_fill_brewer에서 지원하는 색상 팔레트 조회
+RColorBrewer::display.brewer.all()
+
+#Cars93 데이터 이용-도시,고속도로별 연비 
+library(MASS)
+head(Cars93)
+
+ggplot(Cars93, aes(Weight,MPG.highway))+
+#geom_point(shape=21,size=6) #기본
+#geom_point(aes(size=MPG.highway),shape=21) #사이즈 지정
+#geom_point(aes(size=MPG.highway),shape=21,
+#           colour='red') #색상지정
+geom_point(aes(size=MPG.highway),shape=21,
+           fill='red')  #내부채우기
+
+#ggplot(Cars93,aes(Weight, MPG.highway,fill=Price))+
+  #연속형 변수값에 따른 색깔 변화 
+ggplot(Cars93,aes(Weight, MPG.highway,fill=Cylinders))+
+  #범주형 변수Cylinders에 따른 색깔 변화
+geom_point(size=5, shape=21, col='red')+
+#scale_fill_brewer(palette='Oranges')
+#색깔 지정을 미리 정의된 팔레트 이용 
+ #scale_fill_brewer(palette='Set1')
+ scale_fill_brewer(palette='Paired')
+
+#공간지도 - 지도에 통계관련 자료를 표시 
+
+install.packages('ggmap')
+library(ggmap)
+
+install.packages('maps')
+library(maps)
+
+install.packages('mapproj')
+library(mapproj)
+
+install.packages("ggmap")
+library(ggmap)
+  
+
+seoulmp<-get_googlemap('seoul')
+#seoulmp<-get_googlemap('seoul',maptype='satellite')
+seoulmp<-get_googlemap('seoul',maptype='roadmap',zoom=12)
+#seoulmp<-get_googlemap('seoul',maptype='hybrid')
+#seoulmp<-get_googlemap('seoul',maptype='terrain')
+seoul<-ggmap(seoulmp)
+print(seoul)
+
+head(accid_2015_12)
+seoul_lat_lon<-read.csv('c:/JAVA/seoul_lat_lon.txt')
+head(seoul_lat_lon)
+
+#교통사고 파일과 구별 위치정보를 합침
+accid_2015_12<-merge(accid_2015_12,seoul_lat_lon,
+                     by.x=자치구명, by.y=area)
+#이름만 다르고 같은 행을 합쳐줌
+accid_2015_12<-merge(accid_2015_12, seoul_lat_lon,
+                     by.x='자치구명',by.y='area')
+head(accid_2015_12)
+
+#맵에 자치구 위치를 점으로 표시
+seoulmp<-get_googlemap('seoul',maptype='roadmap',zoom=12)
+gmp<-ggmap(seoulmp)
+gmp<-gmp+geom_point(data=accid_2015_12,aes(x=lon,y=lat,size=발생건수),
+                    shape=17,color='blue',alpha=.5)
+
+gmp<-gmp+geom_text(data=accid_2015_12,aes(label=자치구명),
+                   size=3,hjust=1.2, fontface='bold')
+#gmp<-gmp+geom_path(
+#  data=accid_2015_12,aes(x=lon, y=lat),
+#  color='red',alpha=.5,lwd=1)
+print(gmp)
+```
+
+
+
+
+
+
+
+
+
+
+
+지도 visualisation
+```{r}
+install.packages("ggplot2")
+install.packages("ggmap")
+library(ggmap)
+```
+```{r}
+install.packages('devtools')
+library('devtools')
+install_github('dkahle/ggmap')
+library('ggmap')
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+fileEncoding="euc-kr"
+#베이직알프로그래밍
+install.packages('reaflet')
+library(leaflet)
+  
+pop_15<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/acc_death_2015.csv', header = T, fileEncoding = "euc-kr")
+pop_16<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/acc_death_2015.csv', header = T, fileEncoding = "euc-kr")
+pop_17<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/acc_death_2015.csv', header = T, fileEncoding = "euc-kr")
+pop_19<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/acc_death_2019.csv', header = T, fileEncoding = "euc-kr")
+
+# 2015년~2017년 사이의 전국 사망교통사고
+  kor <-rbind(pop_15, pop_16, pop_17, pop_19)
+
+  
+colnames(pop_15)
+colnames(pop_19)
+```
+
+
+
+```{r}
+# install.packages('reaflet')
+library(leaflet)
+
+traffic <- function(x1){
+pop_15<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/accident_death_2015.csv', header = T, fileEncoding="UTF-8")
+pop_16<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/accident_death_2016.csv', header = T, fileEncoding="UTF-8")
+pop_17<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/accident_death_2017.csv', header = T, fileEncoding="UTF-8")
+pop_19<-read.csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/accident_death_2019.csv', header = T, fileEncoding="UTF-8")
+  
+  # 2012년~2017년 사이의 전국 사망교통사고
+  kor <-rbind(pop_15,pop_16,pop_17,pop_19)
+  
+  #사고발생지 시도 추출
+  z1 <- kor$발생지시도 #전국 사망교통사고 데이터에서 사고가 발생한 시도만 추출
+  z2 <- sort(unique(z1)) #z1에서 추출한 시도에서 중복제거(unique) 후 정렬(sort)
+  z3 <- data.frame(z2) #z2에서 추출한 factor형 데이터를 datafram형태로 변환
+
+  #사고발생지 시군구 추출
+  y1 <- kor$발생지시군구
+  y2 <- sort(unique(y1))
+  y3 <- data.frame(y2)
+  
+  
+  #초기값설정(지역명 변수,zd:시도, yd:시군구)
+  zd <- 0 
+  yd <- 0
+  
+  #발생지 시도인지 판별
+  #z3에는 강원, 경기, ... , 충북까지 전국에 17개의 시도가 데이터가 존재하기에 
+  #이를 for문을 사용해서 하나씩 비교해서 입력값이 '시도'이면 zd에 저장
+  #as.character(z3[1,]) : z3의 첫번째 값은 "강원"으로 factor형으로 저장되어 있기에 문자형으로 변환
+  for(k in 1:17){
+    if(x1==as.character(z3[k,])){zd <- as.character(z3[k,]) }
+  }
+  
+  #발생지 시군구인지 판별
+  if(zd == 0){
+    for(i in 1:209){
+      if(x1==as.character(y3[i,])){
+        yd <- as.character(y3[i,]) }
+    }  
+  }
+  
+  #입력한 지역명의 데이터만 추출
+  #zd==0 만약 입력값이 시군구일 경우 '시도'데이터변수인 zd은 초기값 0을 가진다.
+  if(zd == 0){
+    dt <- subset(kor,kor$발생지시군구==yd)
+  }else{
+    dt <- subset(kor,kor$발생지시도==zd)
+  }
+  
+  if(x1 == "전국"){dt <- kor}
+  
+  #주야 구분 데이터
+  day <- subset(dt,dt$주야=="주간")
+  night <- subset(dt,dt$주야=="야간")
+  
+  #'leafelt'패키지 사용
+  leaflet(data=dt) %>%  #패키지에서 사용될 데이터입력
+    addTiles(group = "일반지도") %>% #일반지도
+    addProviderTiles("Stamen.Toner", group = "토너지도") %>%
+    addCircles(data=day, #주간데이터
+               lng = ~경도,  
+               lat = ~위도,
+               weight = 2, #선 두께 
+               radius = ~sqrt(사상자수) * 130, #원 크기 
+               popup =  ~paste0(발생지시군구,"<br/>연도: ",발생년,"<br/>",주야, "<br/>사상자수: ",사상자수,"<br/>",법규위반),
+               fillColor = "red", # 원안쪽 색상 
+               highlightOptions = highlightOptions( # 포인트이동시 강조 
+                 weight = 10,
+                 color = "brown",
+                 fillColor = "green" ),
+               label = ~발생지시도, # 포인트를 올려놓을 시 표시할 문구
+               group = "주간") %>%   
+    addCircles(data=night, #야간데이터
+               lng = ~경도,  
+               lat = ~위도,
+               weight = 2, #선 두께 
+               radius = ~sqrt(사상자수) * 130, #원 크기 
+               popup =  ~paste0(발생지시군구,"<br/>연도: ",발생년,"<br/>",주야, "<br/>사상자수: ",사상자수,"<br/>",법규위반),
+               fillColor = "red", # 원안쪽 색상 
+               highlightOptions = highlightOptions( # 포인트이동시 강조 
+                 weight = 10,
+                 color = "brown",
+                 fillColor = "green" ),
+               label = ~발생지시도, # 포인트를 올려놓을 시 표시할 문구
+               group = "야간") %>%
+    addLayersControl(baseGroups = c("일반지도", "토너지도"), #라디오도구 //표시하고자하는 함수를 group을 지정해주면 된다.
+                     overlayGroups = c("주간","야간"), #체크도구
+                     options = layersControlOptions(collapsed = FALSE)) #옵션
+}
+
+#example
+traffic("서울")
+traffic("송파구")
+```
+
+
+```{r}
+seoul_leaflet <- traffic("서울")
+songpagu_leaflet <- traffic("송파구")
+gangnamgu_leaflet <- traffic("강남구")
+dongdaemoon_leaflet <- traffic("동대문구")
+yeongdeungpo_leaflet <- traffic("영등포구")
+youngsan_leaflet <- traffic("용산구")
+
+install.packages('mapshot')
+
+
+## install 'webshot' package
+library(devtools)
+install_github("wch/webshot")
+
+## load packages
+library(leaflet)
+library(htmlwidgets)
+library(webshot)
+
+## create map
+m <- leaflet() %>% addTiles()
+
+## save html to png
+saveWidget(seoul_leaflet, "seoul_leaflet.html", selfcontained = TRUE)
+
+saveWidget(songpagu_leaflet, "songpagu_leaflet.html", selfcontained = TRUE)
+
+saveWidget(gangnamgu_leaflet, "gangnamgu_leaflet.html", selfcontained = TRUE)
+
+saveWidget(dongdaemoon_leaflet, "dongdaemoon_leaflet.html", selfcontained = TRUE)
+
+saveWidget(yeongdeungpo_leaflet, "yeongdeungpo_leaflet.html", selfcontained = TRUE)
+
+saveWidget(youngsan_leaflet, "youngsan_leaflet.html", selfcontained = TRUE)
+```
+
+
+
+
+```{r}
+## 폰트 설정 패키지 설치
+
+install.packages("extrafont")
+library(extrafont)
+
+## 존재하는 모든 폰트 불러오기
+font_import()
+
+## 폰트 설정
+theme_set(theme_gray(base_family='NanumGothic'))
+
+## 혹은
+theme_set(theme_gray(base_family='AppleMyungjo'))
+
+
+check <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/accident_death_2019.csv')
+
+check %>% sum('사상자수')
+```
+
+
+
+
+
+```{r}
+### 데이터시각화
+
+library(dplyr)
+library(sqldf)
+library(ggplot2)
+
+# 2015년~2017년 사이의 전국 사망교통사고
+
+kor %>% dim()
+kor %>% head()
+kor %>% names()
+
+year_death <- sqldf('select 발생년, sum(사망자수) 사망자수, sum(중상자수) 중상자수, sum(경상자수) 경상자수 from kor group by 발생년')
+
+year_death
+
+
+Violation <- sqldf('select 법규위반, count(법규위반) 법규위반수 from kor group by 법규위반')
+Violation
+
+
+#막대그래프
+ggplot(year_death, aes(x=발생년, y=사망자수)) + geom_bar(stat="identity")
+ggplot(year_death, aes(x=발생년, y=중상자수)) + geom_bar(stat="identity")
+ggplot(year_death, aes(x=발생년, y=경상자수)) + geom_bar(stat="identity")
+
+ggplot(Violation, aes(x = 법규위반, y = 법규위반수)) + geom_bar(stat="identity") +   theme(axis.text.x=element_text(angle=90, hjust=1))
+
+
+  
+```
+
+
+
+```{r}
+install.packages(c("maptools", "rgdal"), dependencies=TRUE)
+
+library(tidyverse)
+library(maptools)
+library(rgdal)
+```
+
+```{r}
+roads <- readOGR('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/[2020-03-31]NODELINKDATA/MOCT_LINK.shp')
+
+node <- readOGR('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/visual/[2020-03-31]NODELINKDATA/MOCT_NODE.shp')
+```
+
+
+```{r}
+class( roads )
+str(roads, max.level=2)
+head(roads@data)
+```
+
+```{r}
+library(readxl)
+
+```
+
+```{r}
+gangnam_accident <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/2.Project/data_for_0903/additional_analysis/Gangnam_accidentInfoList.csv')
+jongro_accidentInfoList <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/2.Project/data_for_0903/additional_analysis/Jongro_accidentInfoList.csv')
+junggu_accidentInfoList <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/2.Project/data_for_0903/additional_analysis/Junggu_accidentInfoList.csv')
+songpa_accidentInfoList <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/2.Project/data_for_0903/additional_analysis/Songpa_accidentInfoList.csv')
+yeongdeungpo_accidentInfoList <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/2.Project/data_for_0903/additional_analysis/Yeongdeungpo_accidentInfoList.csv')
+
+specific_gu <-rbind(gangnam_accident,jongro_accidentInfoList,junggu_accidentInfoList,songpa_accidentInfoList,yeongdeungpo_accidentInfoList)
+```
+
+
+```{r}
+write.csv(specific_gu, file = 'specific_gu.csv')
+```
+
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(nycflights13)
+install.packages("reprex")
+library(reprex)
+
+
+
+specific_gu$년월일<- substr(specific_gu$사고번호, 1, 8)
+
+
+specific_gu$Date <- as.Date(specific_gu$년월일, format = '%Y%m%d')
+
+strsplit(specific_gu$시군구, split =" ")
+
+
+change_x <- data.frame(do.call('rbind', strsplit(as.character(specific_gu$시군구), split=' ', fixed=T))) 
+
+specific_gu$시 <- change_x[,1]
+specific_gu$구 <- change_x[,2]
+specific_gu$동 <- change_x[,3]
+```
+
+
+```{r}
+
+selected_accident <- select(specific_gu, 사고번호, Date, 요일, 구, 동, 사고내용, 사망자수, 중상자수, 경상자수, 사고유형, 법규위반, 노면상태, 기상상태, 도로형태)
+
+selected_accident$date <- selected_accident$Date
+
+news_month <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/news_issue_1month.csv')
+news_week <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/news_issue_1week.csv')
+views_week <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/scaled_views_week.csv')
+views_month <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/project_data/scaled_views_month.csv')
+
+shit <- read_csv('/Users/ingeonhwang/Desktop/1.Yonsei_bigdata_analysis/merged_0908_3.csv')
+
+shit
+
+adddd <- aggregate(shit$사상자수, by=list(shit$date), sum)
+
+
+megered_data<- merge(x = selected_accident, y = news_month, by = "date", all.x = TRUE)
+
+
+write.csv(adddd, file = 'adddd.csv')
+```
+
